@@ -1,0 +1,165 @@
+/* ── Profile page styles ── */
+
+/* ── Banner ── */
+.profile-banner {
+    height: 220px;
+    background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 40%, var(--color-primary-light) 100%);
+    position: relative;
+}
+
+.profile-banner::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 80px;
+    background: linear-gradient(transparent, var(--color-bg));
+}
+
+/* ── Main layout ── */
+.profile-container {
+    max-width: 720px;
+    margin: -64px auto 0;
+    padding: 0 1.5rem 3rem;
+    position: relative;
+    z-index: 1;
+}
+
+/* ── Avatar ── */
+.avatar-ring {
+    width: 128px;
+    height: 128px;
+    border-radius: 50%;
+    padding: 4px;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+    display: inline-block;
+}
+
+.avatar-ring img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--color-white);
+}
+
+.avatar-ring .placeholder {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 3px solid var(--color-white);
+    background: var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--color-white);
+}
+
+/* ── Header row ── */
+.profile-header {
+    display: flex;
+    align-items: flex-end;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.profile-header .info {
+    padding-bottom: 0.5rem;
+}
+
+.profile-header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-text);
+}
+
+.profile-header .username {
+    color: var(--color-primary-muted);
+    font-size: 0.95rem;
+    margin-top: 0.15rem;
+}
+
+/* ── Detail grid ── */
+.details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+}
+
+.detail-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-primary-muted);
+    margin-bottom: 0.2rem;
+}
+
+.detail-value {
+    font-size: 1rem;
+    color: var(--color-text);
+}
+
+.detail-value.muted {
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
+.bio-text {
+    white-space: pre-wrap;
+}
+
+/* ── Stats row ── */
+.stats {
+    display: flex;
+    gap: 2rem;
+}
+
+.stat {
+    text-align: center;
+    flex: 1;
+}
+
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-primary);
+}
+
+.stat-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-primary-muted);
+    margin-top: 0.15rem;
+}
+
+/* ── Actions ── */
+.actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 520px) {
+    .profile-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .details {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-banner { height: 160px; }
+
+    .avatar-ring {
+        width: 104px;
+        height: 104px;
+    }
+}

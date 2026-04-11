@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ profile_user.username }} — RockConnect</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/global.css' %}">
+    <link rel="stylesheet" href="{% static 'css/profile.css' %}">
+</head>
+<body>
+
+<div class="profile-banner"></div>
+
+<div class="profile-container">
+
+    <div class="profile-header">
+        <div class="avatar-ring">
+            {% if profile_user.profile_photo_url %}
+                <img src="{{ profile_user.profile_photo_url }}" alt="{{ profile_user.username }}">
+            {% elif profile_user.avatar_url %}
+                <img src="{{ profile_user.avatar_url }}" alt="{{ profile_user.username }}">
+            {% else %}
+                <div class="placeholder">{{ profile_user.username|first|upper }}</div>
+            {% endif %}
+        </div>
+        <div class="info">
+            <h1>{{ profile_user.get_full_name|default:profile_user.username }}</h1>
+            {% if profile_user.get_full_name %}
+                <div class="username">@{{ profile_user.username }}</div>
+            {% endif %}
+            {% if profile_user.company %}
+                <div class="username">{{ profile_user.company }}</div>
+            {% endif %}
+            {% if profile_user.is_staff %}
+                <span class="badge staff">Staff</span>
+            {% endif %}
+            <span class="badge member">Member</span>
+        </div>
+    </div>
+
+    {% if profile_user.bio %}
+    <div class="card">
+        <div class="card-title">Bio</div>
+        <div class="detail-value bio-text">{{ profile_user.bio }}</div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-title">Profile Details</div>
+        <div class="details">
+            <div>
+                <div class="detail-label">Email</div>
+                {% if is_own_profile %}
+                    <div class="detail-value">{{ profile_user.email|default:"Not set" }}</div>
+                {% else %}
+                    <div class="detail-value muted">Hidden</div>
+                {% endif %}
+            </div>
+            <div>
+                <div class="detail-label">Joined</div>
+                <div class="detail-value">{{ profile_user.date_joined|date:"M j, Y" }}</div>
+            </div>
+            <div>
+                <div class="detail-label">Company / School</div>
+                <div class="detail-value">{{ profile_user.company|default:"Not set" }}</div>
+            </div>
+            <div>
+                <div class="detail-label">Username</div>
+                <div class="detail-value">{{ profile_user.username }}</div>
+            </div>
+            <div>
+                <div class="detail-label">Last Active</div>
+                <div class="detail-value">{{ profile_user.last_login|date:"M j, Y"|default:"Never" }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Activity</div>
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-number">{{ days_since_joined }}</div>
+                <div class="stat-label">Days as Member</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="actions">
+        {% if is_own_profile %}
+            <a class="btn btn-primary" href="{% url 'users:account' %}">Edit Account</a>
+            <a class="btn btn-secondary" href="{% url 'account_logout' %}">Log Out</a>
+        {% endif %}
+    </div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,114 @@
+/* ── Account page styles ── */
+
+body {
+    padding: 2rem;
+}
+
+.card {
+    max-width: 480px;
+    margin: 2rem auto;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px var(--color-primary-12);
+    padding: 2rem;
+}
+
+.card h1 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid var(--color-primary);
+    padding-bottom: 0.75rem;
+    color: var(--color-primary);
+}
+
+.field {
+    margin-bottom: 1rem;
+}
+
+.field dt {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-primary-muted);
+    margin-bottom: 0.25rem;
+}
+
+.field dd {
+    font-size: 1rem;
+    color: var(--color-text);
+}
+
+.avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 1rem;
+}
+
+.avatar-placeholder {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: var(--color-white);
+    margin-bottom: 1rem;
+}
+
+.logout-link {
+    display: inline-block;
+    margin-top: 1.5rem;
+    color: var(--color-primary);
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.logout-link:hover {
+    text-decoration: underline;
+}
+
+.profile-photo {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 1rem;
+    border: 3px solid var(--color-primary);
+}
+
+.bio-text {
+    white-space: pre-wrap;
+}
+
+/* ── Edit form ── */
+.edit-form {
+    margin-top: 1.5rem;
+    border-top: 2px solid var(--color-primary);
+    padding-top: 1.5rem;
+}
+
+.edit-form h2 {
+    font-size: 1.2rem;
+    color: var(--color-primary);
+    margin-bottom: 1rem;
+}
+
+.btn-save {
+    display: inline-block;
+    padding: 0.6rem 1.5rem;
+    background: var(--color-primary);
+    color: var(--color-white);
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.btn-save:hover {
+    opacity: 0.85;
+}

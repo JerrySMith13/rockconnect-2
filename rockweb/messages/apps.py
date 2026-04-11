@@ -2,4 +2,7 @@ from django.apps import AppConfig
 
 
 class MessagesConfig(AppConfig):
-    name = 'messages'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "messages"
+    label = "chat"
+    verbose_name = "Chat Messages"

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Account</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/global.css' %}">
+    <link rel="stylesheet" href="{% static 'css/account.css' %}">
+</head>
+<body>
+    <div class="card">
+        <h1>My Account</h1>
+
+        {% if user.profile_photo_url %}
+            <img class="profile-photo" src="{{ user.profile_photo_url }}" alt="Profile photo">
+        {% elif user.avatar_url %}
+            <img class="avatar" src="{{ user.avatar_url }}" alt="Avatar">
+        {% else %}
+            <div class="avatar-placeholder">{{ user.username|first|upper }}</div>
+        {% endif %}
+
+        <dl>
+            <div class="field">
+                <dt>Username</dt>
+                <dd>{{ user.username }}</dd>
+            </div>
+
+            <div class="field">
+                <dt>Email</dt>
+                <dd>{{ user.email|default:"Not set" }}</dd>
+            </div>
+
+            <div class="field">
+                <dt>Name</dt>
+                <dd>{{ user.get_full_name|default:"Not set" }}</dd>
+            </div>
+
+            <div class="field">
+                <dt>Bio</dt>
+                <dd class="bio-text">{{ user.bio|default:"Not set" }}</dd>
+            </div>
+
+            <div class="field">
+                <dt>Company / School</dt>
+                <dd>{{ user.company|default:"Not set" }}</dd>
+            </div>
+
+            <div class="field">
+                <dt>Member since</dt>
+                <dd>{{ user.date_joined|date:"N j, Y" }}</dd>
+            </div>
+        </dl>
+
+        <div class="edit-form">
+            <h2>Edit Profile</h2>
+            <div class="msg" id="form-msg"></div>
+            <form id="profile-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="first_name">First Name</label>
+                    <input type="text" id="first_name" name="first_name" value="{{ user.first_name }}">
+                </div>
+                <div class="form-group">
+                    <label for="last_name">Last Name</label>
+                    <input type="text" id="last_name" name="last_name" value="{{ user.last_name }}">
+                </div>
+                <div class="form-group">
+                    <label for="profile_photo_url">Profile Photo URL</label>
+                    <input type="url" id="profile_photo_url" name="profile_photo_url" value="{{ user.profile_photo_url }}" placeholder="https://example.com/photo.jpg">
+                    <div class="help-text">Link to an image to use as your profile photo</div>
+                </div>
+                <div class="form-group">
+                    <label for="bio">Bio</label>
+                    <textarea id="bio" name="bio" maxlength="500" placeholder="Tell us about yourself...">{{ user.bio }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label for="company">Company / School</label>
+                    <input type="text" id="company" name="company" value="{{ user.company }}" placeholder="Where do you work or study?">
+                </div>
+                <button type="submit" class="btn-save">Save Changes</button>
+            </form>
+        </div>
+
+        <a class="logout-link" href="{% url 'account_logout' %}">Log out</a>
+    </div>
+
+    <script>
+    document.getElementById("profile-form").addEventListener("submit", async function(e) {
+        e.preventDefault();
+        const msg = document.getElementById("form-msg");
+        const data = {};
+        for (const field of ["first_name", "last_name", "profile_photo_url", "bio", "company"]) {
+            data[field] = document.getElementById(field).value;
+        }
+        try {
+            const resp = await fetch("{% url 'users:api_me' %}", {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value,
+                },
+                body: JSON.stringify(data),
+            });
+            if (resp.ok) {
+                msg.textContent = "Profile updated!";
+                msg.className = "msg success";
+                msg.style.display = "block";
+                setTimeout(() => location.reload(), 800);
+            } else {
+                const err = await resp.json();
+                msg.textContent = err.error || "Something went wrong.";
+                msg.className = "msg error";
+                msg.style.display = "block";
+            }
+        } catch {
+            msg.textContent = "Network error.";
+            msg.className = "msg error";
+            msg.style.display = "block";
+        }
+    });
+    </script>
+</body>
+</html>

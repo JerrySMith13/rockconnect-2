@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% load static %}
+{% load socialaccount %}
+
+{% block title %}Sign Up — RockConnect{% endblock %}
+
+{% block extra_head %}
+<style>
+    .auth-wrapper {
+        max-width: 440px;
+        margin: 3rem auto;
+        padding: 0 1rem;
+    }
+
+    .auth-card {
+        padding: 2.5rem 2rem;
+    }
+
+    .auth-card h1 {
+        font-size: 1.6rem;
+        color: var(--color-primary);
+        margin-bottom: 0.5rem;
+        text-align: center;
+    }
+
+    .auth-card .subtitle {
+        font-size: 0.9rem;
+        color: var(--color-primary-muted);
+        text-align: center;
+        margin-bottom: 1.75rem;
+    }
+
+    .auth-card .form-errors {
+        background: var(--color-error-bg);
+        color: var(--color-error-text);
+        border: 1px solid var(--color-error-border);
+        border-radius: 6px;
+        padding: 0.6rem 0.75rem;
+        margin-bottom: 1rem;
+        font-size: 0.85rem;
+    }
+
+    .auth-card .form-errors ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .auth-card .field-error {
+        color: var(--color-error-text);
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+    }
+
+    .btn-block {
+        width: 100%;
+        padding: 0.7rem;
+        font-size: 0.95rem;
+        margin-top: 0.5rem;
+    }
+
+    .auth-divider {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin: 1.5rem 0;
+        color: var(--color-primary-muted);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--color-border);
+    }
+
+    .social-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.6rem;
+        width: 100%;
+        padding: 0.65rem;
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        background: var(--color-white);
+        color: var(--color-text);
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: background 0.15s, border-color 0.15s;
+    }
+
+    .social-btn:hover {
+        background: var(--color-bg-input);
+        border-color: var(--color-primary-light);
+    }
+
+    .social-btn svg {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+    }
+
+    .auth-footer {
+        margin-top: 1.5rem;
+        text-align: center;
+        font-size: 0.9rem;
+        color: var(--color-primary-muted);
+    }
+
+    .auth-footer a {
+        color: var(--color-primary);
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .auth-footer a:hover {
+        text-decoration: underline;
+    }
+
+    .terms-note {
+        font-size: 0.75rem;
+        color: var(--color-primary-muted);
+        text-align: center;
+        margin-top: 1rem;
+        line-height: 1.5;
+    }
+
+    .terms-note a {
+        color: var(--color-primary);
+        text-decoration: none;
+    }
+
+    .terms-note a:hover {
+        text-decoration: underline;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="card auth-card">
+        <h1>Create an Account</h1>
+        <div class="subtitle">Join the RockConnect community</div>
+
+        {% if form.non_field_errors %}
+            <div class="form-errors">
+                <ul>
+                    {% for error in form.non_field_errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'account_signup' %}">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label for="id_email">Email</label>
+                <input type="email" id="id_email" name="email"
+                       value="{{ form.email.value|default:'' }}"
+                       autocomplete="email" autofocus required>
+                {% if form.email.errors %}
+                    <div class="field-error">{{ form.email.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="id_username">Username</label>
+                <input type="text" id="id_username" name="username"
+                       value="{{ form.username.value|default:'' }}"
+                       autocomplete="username" required>
+                {% if form.username.errors %}
+                    <div class="field-error">{{ form.username.errors|join:", " }}</div>
+                {% endif %}
+                <div class="help-text">This is how others will see you on RockConnect.</div>
+            </div>
+
+            <div class="form-group">
+                <label for="id_password1">Password</label>
+                <input type="password" id="id_password1" name="password1"
+                       autocomplete="new-password" required>
+                {% if form.password1.errors %}
+                    <div class="field-error">{{ form.password1.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="id_password2">Confirm Password</label>
+                <input type="password" id="id_password2" name="password2"
+                       autocomplete="new-password" required>
+                {% if form.password2.errors %}
+                    <div class="field-error">{{ form.password2.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+
+            {{ redirect_field }}
+
+            <button type="submit" class="btn btn-primary btn-block">Create Account</button>
+        </form>
+
+        {% get_providers as socialaccount_providers %}
+        {% if socialaccount_providers %}
+            <div class="auth-divider">or</div>
+            {% for provider in socialaccount_providers %}
+                {% provider_login_url provider process="login" scope=scope auth_params=auth_params as provider_url %}
+                <a class="social-btn" href="{{ provider_url }}">
+                    {% if provider.id == "google" %}
+                        <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                        </svg>
+                    {% endif %}
+                    Sign up with {{ provider.name }}
+                </a>
+            {% endfor %}
+        {% endif %}
+
+        <div class="terms-note">
+            By creating an account, you agree to abide by the RockConnect community guidelines.
+        </div>
+
+        <div class="auth-footer">
+            Already have an account?
+            <a href="{% url 'account_login' %}">Sign in</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

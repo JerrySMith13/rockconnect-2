@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Manage {{ group.name }} — RockConnect{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'css/groups.css' %}">
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+
+<div class="admin-panel">
+    <a href="{% url 'group-detail-page' group.slug %}" class="django-admin-link">&larr; Back to group</a>
+
+    <h1>Manage: {{ group.name }}</h1>
+    <p class="admin-subtitle">Group administration panel</p>
+
+    {% if user.is_staff %}
+    <a href="/admin/groups/group/{{ group.pk }}/change/" class="django-admin-link" target="_blank">
+        Open in Django Admin &rarr;
+    </a>
+    {% endif %}
+
+    <!-- Settings section -->
+    <div class="admin-section">
+        <h2>Group Settings</h2>
+        <div id="settings-msg"></div>
+        <form id="settings-form">
+            <div class="admin-field">
+                <label for="s-name">Name</label>
+                <input type="text" id="s-name" value="{{ group.name }}">
+            </div>
+            <div class="admin-field">
+                <label for="s-bio">Bio</label>
+                <textarea id="s-bio">{{ group.bio }}</textarea>
+            </div>
+            <div class="admin-field">
+                <label for="s-thumbnail">Thumbnail URL</label>
+                <input type="url" id="s-thumbnail" value="{{ group.thumbnail_url }}" placeholder="https://example.com/image.jpg">
+            </div>
+            <div class="admin-field">
+                <label for="s-visibility">Visibility</label>
+                <select id="s-visibility">
+                    <option value="public" {% if group.visibility == "public" %}selected{% endif %}>Public</option>
+                    <option value="private" {% if group.visibility == "private" %}selected{% endif %}>Private</option>
+                </select>
+            </div>
+            <div class="admin-field">
+                <label for="s-post-perm">Who can post</label>
+                <select id="s-post-perm">
+                    <option value="anyone" {% if group.post_permission == "anyone" %}selected{% endif %}>Any member</option>
+                    <option value="admins" {% if group.post_permission == "admins" %}selected{% endif %}>Admins only</option>
+                </select>
+            </div>
+            <button type="submit" class="admin-save">Save Settings</button>
+        </form>
+    </div>
+
+    <!-- Members section -->
+    <div class="admin-section">
+        <h2>Members ({{ member_count }})</h2>
+        <div id="members-msg"></div>
+        <table class="member-table" id="member-table">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Nickname</th>
+                    <th>Role</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="member-tbody">
+                {% for m in members %}
+                <tr data-uid="{{ m.user__id }}">
+                    <td>{{ m.user__username }}</td>
+                    <td>{{ m.nickname }}</td>
+                    <td>
+                        <select class="role-select" data-uid="{{ m.user__id }}">
+                            <option value="member" {% if m.role == "member" %}selected{% endif %}>Member</option>
+                            <option value="admin" {% if m.role == "admin" %}selected{% endif %}>Admin</option>
+                        </select>
+                    </td>
+                    <td><button class="btn-remove" data-uid="{{ m.user__id }}">Remove</button></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="admin-add-member">
+            <input type="text" id="add-member-input" placeholder="Username to add...">
+            <button class="btn btn-primary" id="add-member-btn">Add</button>
+        </div>
+    </div>
+
+    <!-- Posts section -->
+    <div class="admin-section">
+        <h2>Posts</h2>
+        <div id="posts-msg"></div>
+        <div id="admin-post-list">Loading...</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function() {
+    "use strict";
+
+    const SLUG = "{{ group.slug }}";
+    const API = "/api/groups/" + SLUG;
+    const CSRF = document.querySelector("[name=csrfmiddlewaretoken]").value;
+
+    function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+
+    async function api(url, opts) {
+        opts = opts || {};
+        const headers = {"X-CSRFToken": CSRF};
+        if (opts.body && typeof opts.body === "object") {
+            headers["Content-Type"] = "application/json";
+            opts.body = JSON.stringify(opts.body);
+        }
+        Object.assign(headers, opts.headers || {});
+        const resp = await fetch(url, {...opts, headers});
+        if (!resp.ok) { const e = await resp.json().catch(function(){return {};}); throw new Error(e.error || "Error"); }
+        return resp.json();
+    }
+
+    function showMsg(elId, text, type) {
+        const el = document.getElementById(elId);
+        el.className = "admin-msg " + type;
+        el.textContent = text;
+        setTimeout(function() { el.textContent = ""; el.className = ""; }, 4000);
+    }
+
+    // ── Settings ──
+    document.getElementById("settings-form").addEventListener("submit", async function(e) {
+        e.preventDefault();
+        try {
+            await api(API + "/", {method: "PATCH", body: {
+                name: document.getElementById("s-name").value.trim(),
+                bio: document.getElementById("s-bio").value,
+                thumbnail_url: document.getElementById("s-thumbnail").value.trim(),
+                visibility: document.getElementById("s-visibility").value,
+                post_permission: document.getElementById("s-post-perm").value,
+            }});
+            showMsg("settings-msg", "Settings saved!", "success");
+        } catch(err) {
+            showMsg("settings-msg", err.message, "error");
+        }
+    });
+
+    // ── Role changes ──
+    document.querySelectorAll(".role-select").forEach(function(sel) {
+        sel.addEventListener("change", async function() {
+            try {
+                await api(API + "/members/role/", {method:"PATCH", body:{
+                    user_id: parseInt(sel.dataset.uid), role: sel.value,
+                }});
+                showMsg("members-msg", "Role updated.", "success");
+            } catch(err) {
+                showMsg("members-msg", err.message, "error");
+            }
+        });
+    });
+
+    // ── Remove member ──
+    document.querySelectorAll(".btn-remove").forEach(function(btn) {
+        btn.addEventListener("click", async function() {
+            if (!confirm("Remove this member?")) return;
+            try {
+                await api(API + "/members/", {method:"DELETE", body:{user_id: parseInt(btn.dataset.uid)}});
+                btn.closest("tr").remove();
+                showMsg("members-msg", "Member removed.", "success");
+            } catch(err) {
+                showMsg("members-msg", err.message, "error");
+            }
+        });
+    });
+
+    // ── Add member ──
+    document.getElementById("add-member-btn").addEventListener("click", async function() {
+        const input = document.getElementById("add-member-input");
+        const username = input.value.trim();
+        if (!username) return;
+        try {
+            const user = await api("/api/users/" + encodeURIComponent(username) + "/");
+            await api(API + "/members/", {method:"POST", body:{user_id: user.id}});
+            input.value = "";
+            showMsg("members-msg", username + " added!", "success");
+            location.reload();
+        } catch(err) {
+            showMsg("members-msg", err.message, "error");
+        }
+    });
+
+    // ── Posts management ──
+    async function loadAdminPosts() {
+        const el = document.getElementById("admin-post-list");
+        try {
+            const data = await api(API + "/posts/?limit=50");
+            if (data.posts.length === 0) {
+                el.innerHTML = '<div class="post-empty">No posts yet.</div>';
+                return;
+            }
+            el.innerHTML = '<table class="member-table"><thead><tr>' +
+                '<th>Title</th><th>Author</th><th>Pinned</th><th></th>' +
+                '</tr></thead><tbody>' +
+                data.posts.map(function(p) {
+                    const author = p.author ? p.author.username : "Deleted";
+                    return '<tr data-pid="' + p.id + '">' +
+                        '<td>' + esc(p.title) + '</td>' +
+                        '<td>' + esc(author) + '</td>' +
+                        '<td><input type="checkbox" class="pin-check" data-pid="' + p.id + '"' + (p.pinned ? ' checked' : '') + '></td>' +
+                        '<td><button class="btn-remove delete-post" data-pid="' + p.id + '">Delete</button></td>' +
+                    '</tr>';
+                }).join("") +
+                '</tbody></table>';
+
+            el.querySelectorAll(".pin-check").forEach(function(cb) {
+                cb.addEventListener("change", async function() {
+                    try {
+                        await api(API + "/posts/" + cb.dataset.pid + "/", {
+                            method:"PATCH", body:{pinned: cb.checked}
+                        });
+                        showMsg("posts-msg", cb.checked ? "Post pinned." : "Post unpinned.", "success");
+                    } catch(err) {
+                        cb.checked = !cb.checked;
+                        showMsg("posts-msg", err.message, "error");
+                    }
+                });
+            });
+
+            el.querySelectorAll(".delete-post").forEach(function(btn) {
+                btn.addEventListener("click", async function() {
+                    if (!confirm("Delete this post?")) return;
+                    try {
+                        await api(API + "/posts/" + btn.dataset.pid + "/", {method:"DELETE"});
+                        btn.closest("tr").remove();
+                        showMsg("posts-msg", "Post deleted.", "success");
+                    } catch(err) {
+                        showMsg("posts-msg", err.message, "error");
+                    }
+                });
+            });
+        } catch(err) {
+            el.innerHTML = '<div class="post-empty">Failed to load posts.</div>';
+        }
+    }
+
+    loadAdminPosts();
+})();
+</script>
+{% endblock %}

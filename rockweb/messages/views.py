@@ -4,13 +4,21 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.db.models import Max, Q, Subquery, OuterRef, Exists
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from .models import Conversation, ConversationMember, Message, MessageAttachment
 
 User = get_user_model()
+
+
+# ── Page views ───────────────────────────────────────────────
+
+@login_required
+def chat_page(request):
+    return render(request, "messages/chat.html")
+
 
 # ── helpers ──────────────────────────────────────────────────
 

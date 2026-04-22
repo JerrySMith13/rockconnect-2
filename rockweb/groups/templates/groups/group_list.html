@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Groups — RockConnect{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'css/groups.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="groups-page">
+    <h1>Groups</h1>
+    <div class="groups-toolbar">
+        <input type="text" class="search-input" id="group-search" placeholder="Search groups...">
+        {% if user.is_authenticated %}
+            <a href="{% url 'group-request-page' %}" class="btn btn-primary">Request a Group</a>
+        {% endif %}
+    </div>
+    <div class="group-grid" id="group-grid">
+        {% for group in groups %}
+        <a href="{% url 'group-detail-page' group.slug %}" class="group-card" data-name="{{ group.name|lower }}">
+            <div class="group-card-thumb">
+                {% if group.thumbnail_url %}
+                    <img src="{{ group.thumbnail_url }}" alt="{{ group.name }}">
+                {% else %}
+                    <span class="thumb-placeholder">{{ group.name|first|upper }}</span>
+                {% endif %}
+            </div>
+            <div class="group-card-body">
+                <div class="group-card-name">{{ group.name }}</div>
+                <div class="group-card-bio">{{ group.bio|default:"" }}</div>
+                <div class="group-card-meta">
+                    <span>{{ group.member_count }} member{{ group.member_count|pluralize }}</span>
+                    {% if group.visibility == "private" %}
+                        <span>Private</span>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+        {% empty %}
+        <p class="post-empty">No groups yet.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.getElementById("group-search").addEventListener("input", function() {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll(".group-card").forEach(function(el) {
+        el.style.display = el.dataset.name.includes(q) ? "" : "none";
+    });
+});
+</script>
+{% endblock %}

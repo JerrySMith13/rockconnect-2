@@ -8,6 +8,7 @@ All responses are JSON. Authenticated endpoints require a valid session cookie (
 |---|---|---|
 | Users | `/api/users/` | This document |
 | Conversations | `/api/conversations/` | [conversations.md](conversations.md) |
+| Groups | `/api/groups/` | [groups.md](groups.md) |
 
 ---
 

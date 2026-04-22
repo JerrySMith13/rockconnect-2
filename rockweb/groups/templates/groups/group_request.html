@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Request a Group — RockConnect{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'css/groups.css' %}">
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="admin-panel">
+    <a href="{% url 'group-list-page' %}" class="django-admin-link">&larr; Back to groups</a>
+    <h1>Request a New Group</h1>
+    <p class="admin-subtitle">Submit a request for site admins to review.</p>
+
+    <div class="admin-section">
+        <div id="req-msg"></div>
+        <form id="request-form">
+            <div class="admin-field">
+                <label for="r-name">Group Name</label>
+                <input type="text" id="r-name" required placeholder="e.g. Blues Enthusiasts">
+            </div>
+            <div class="admin-field">
+                <label for="r-email">Contact Email</label>
+                <input type="email" id="r-email" required placeholder="your@email.com">
+            </div>
+            <div class="admin-field">
+                <label for="r-comments">Comments</label>
+                <textarea id="r-comments" placeholder="Tell us about the group you'd like to create..."></textarea>
+            </div>
+            <button type="submit" class="admin-save">Submit Request</button>
+        </form>
+    </div>
+
+    {% if requests %}
+    <div class="admin-section">
+        <h2>Your Requests</h2>
+        <table class="member-table">
+            <thead>
+                <tr><th>Group Name</th><th>Status</th><th>Submitted</th></tr>
+            </thead>
+            <tbody>
+                {% for r in requests %}
+                <tr>
+                    <td>{{ r.group_name }}</td>
+                    <td>{{ r.get_status_display }}</td>
+                    <td>{{ r.created_at|date:"M j, Y" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.getElementById("request-form").addEventListener("submit", async function(e) {
+    e.preventDefault();
+    const msgEl = document.getElementById("req-msg");
+    const csrf = document.querySelector("[name=csrfmiddlewaretoken]").value;
+    try {
+        const resp = await fetch("/api/groups/requests/", {
+            method: "POST",
+            headers: {"Content-Type": "application/json", "X-CSRFToken": csrf},
+            body: JSON.stringify({
+                group_name: document.getElementById("r-name").value.trim(),
+                contact_email: document.getElementById("r-email").value.trim(),
+                comments: document.getElementById("r-comments").value,
+            }),
+        });
+        const data = await resp.json();
+        if (resp.ok) {
+            msgEl.className = "admin-msg success";
+            msgEl.textContent = "Request submitted! We'll review it soon.";
+            document.getElementById("request-form").reset();
+        } else {
+            msgEl.className = "admin-msg error";
+            msgEl.textContent = data.error || "Something went wrong.";
+        }
+    } catch {
+        msgEl.className = "admin-msg error";
+        msgEl.textContent = "Network error.";
+    }
+});
+</script>
+{% endblock %}

@@ -16,10 +16,26 @@ Including another URLconf
 """
 
 from django.contrib import admin
+from django.shortcuts import redirect
 from django.urls import include, path
 
+from groups.views import group_admin_page, group_detail_page, group_list_page, group_request_page
+from messages.views import chat_page
+
+
+def root_redirect(request):
+    if request.user.is_authenticated:
+        return redirect("users:profile", username=request.user.username)
+    return redirect("account_login")
+
+
 urlpatterns = [
-    path("messages/", include("messages.urls")),
+    path("", root_redirect, name="root"),
+    path("chat/", chat_page, name="chat"),
+    path("groups/", group_list_page, name="group-list-page"),
+    path("groups/request/", group_request_page, name="group-request-page"),
+    path("groups/<slug:group_slug>/", group_detail_page, name="group-detail-page"),
+    path("groups/<slug:group_slug>/admin/", group_admin_page, name="group-admin-page"),
     path("users/", include("users.urls")),
     path("api/", include("api.urls")),
     path("accounts/", include("allauth.urls")),

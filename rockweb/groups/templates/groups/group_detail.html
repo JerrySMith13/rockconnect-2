@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ group.name }} — RockConnect{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'css/groups.css' %}">
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+
+<div class="group-hero">
+    {% if group.thumbnail_url %}
+        <img src="{{ group.thumbnail_url }}" alt="{{ group.name }}">
+    {% endif %}
+</div>
+
+<div class="group-container">
+    <div class="group-profile">
+        <div class="group-profile-thumb">
+            {% if group.thumbnail_url %}
+                <img src="{{ group.thumbnail_url }}" alt="{{ group.name }}">
+            {% else %}
+                <span class="thumb-letter">{{ group.name|first|upper }}</span>
+            {% endif %}
+        </div>
+        <div class="group-profile-info">
+            <h1>{{ group.name }}</h1>
+            <div class="group-meta-line">
+                {{ member_count }} member{{ member_count|pluralize }}
+                {% if group.visibility == "private" %} &middot; Private group{% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if group.bio %}
+        <div class="group-bio">{{ group.bio }}</div>
+    {% endif %}
+
+    <div class="group-actions">
+        {% if not is_member %}
+            {% if group.visibility == "public" %}
+                <button class="btn btn-primary" id="join-btn">Join Group</button>
+            {% endif %}
+        {% else %}
+            {% if is_admin %}
+                <a href="{% url 'group-admin-page' group.slug %}" class="btn btn-primary">Manage Group</a>
+            {% endif %}
+            <button class="btn btn-secondary" id="leave-btn">Leave Group</button>
+        {% endif %}
+    </div>
+
+    {% if can_post %}
+        <div class="post-composer" id="post-composer">
+            <button class="btn btn-primary composer-open-btn" id="composer-open" type="button">
+                <span class="composer-open-icon" aria-hidden="true">+</span>
+                Create Post
+            </button>
+
+            <form class="composer-form" id="composer-form" style="display:none;">
+                <div class="composer-header">
+                    <h3>New Post</h3>
+                </div>
+                <div class="composer-msg" id="composer-msg"></div>
+                <div class="form-group">
+                    <label for="composer-title">Title</label>
+                    <input type="text" id="composer-title" name="title" maxlength="255" required>
+                </div>
+                <div class="form-group">
+                    <label for="composer-body">Body</label>
+                    <textarea id="composer-body" name="body" rows="6" required placeholder="What would you like to share?"></textarea>
+                </div>
+                <div class="composer-actions">
+                    <button type="button" class="btn btn-secondary" id="composer-cancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="composer-submit">Post</button>
+                </div>
+            </form>
+        </div>
+    {% elif is_member and group.post_permission == "admins" %}
+        <div class="post-notice">Only group admins can post in this group.</div>
+    {% endif %}
+
+    <div class="post-search">
+        <input type="text" id="post-search" placeholder="Search posts...">
+    </div>
+
+    <div class="post-list" id="post-list">
+        <div class="post-empty">Loading posts...</div>
+    </div>
+
+    <div class="post-pagination" id="post-pagination" style="display:none">
+        <button id="prev-page" disabled>&larr; Prev</button>
+        <span class="page-info" id="page-info"></span>
+        <button id="next-page" disabled>Next &rarr;</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function() {
+    "use strict";
+
+    const SLUG = "{{ group.slug }}";
+    const API = "/api/groups/" + SLUG;
+    const CSRF = document.querySelector("[name=csrfmiddlewaretoken]").value;
+    const IS_MEMBER = {{ is_member|yesno:"true,false" }};
+
+    let currentPage = 1;
+    let totalPosts = 0;
+    const LIMIT = 10;
+    let searchQuery = "";
+    let searchTimer = null;
+
+    function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+
+    async function api(url, opts) {
+        opts = opts || {};
+        const headers = {"X-CSRFToken": CSRF};
+        if (opts.body && typeof opts.body === "object") {
+            headers["Content-Type"] = "application/json";
+            opts.body = JSON.stringify(opts.body);
+        }
+        Object.assign(headers, opts.headers || {});
+        const resp = await fetch(url, {...opts, headers});
+        if (!resp.ok) { const e = await resp.json().catch(function(){return {};}); throw new Error(e.error || "Error"); }
+        return resp.json();
+    }
+
+    function formatDate(iso) {
+        const d = new Date(iso);
+        return d.toLocaleDateString(undefined, {year:"numeric",month:"long",day:"numeric"});
+    }
+
+    async function loadPosts() {
+        const listEl = document.getElementById("post-list");
+        const pagEl = document.getElementById("post-pagination");
+
+        try {
+            const data = await api(API + "/posts/?page=" + currentPage + "&limit=" + LIMIT);
+            totalPosts = data.total;
+            const posts = data.posts;
+            const totalPages = Math.max(1, Math.ceil(totalPosts / LIMIT));
+
+            if (posts.length === 0) {
+                listEl.innerHTML = '<div class="post-empty">No posts yet.</div>';
+                pagEl.style.display = "none";
+                return;
+            }
+
+            // Client-side filter for search
+            const q = searchQuery.toLowerCase();
+            const filtered = q ? posts.filter(function(p) {
+                return p.title.toLowerCase().includes(q) || p.body.toLowerCase().includes(q);
+            }) : posts;
+
+            if (filtered.length === 0) {
+                listEl.innerHTML = '<div class="post-empty">No posts match your search.</div>';
+                pagEl.style.display = "none";
+                return;
+            }
+
+            listEl.innerHTML = filtered.map(function(p) {
+                const author = p.author ? p.author.username : "Deleted user";
+                const edited = p.edited_at ? " (edited)" : "";
+                const pinClass = p.pinned ? " pinned" : "";
+                const pinBadge = p.pinned ? '<span class="post-pin-badge">Pinned</span>' : "";
+                return '<div class="post-card' + pinClass + '" data-post-id="' + p.id + '">' +
+                    '<div class="post-card-header">' +
+                        '<h3 class="post-card-title">' + esc(p.title) + '</h3>' +
+                        pinBadge +
+                    '</div>' +
+                    '<div class="post-card-meta">' + esc(author) + ' &middot; ' + formatDate(p.created_at) + edited + '</div>' +
+                    '<div class="post-card-body truncated">' + esc(p.body) + '</div>' +
+                    '<button class="post-read-more">Read more</button>' +
+                '</div>';
+            }).join("");
+
+            // Read more toggles
+            listEl.querySelectorAll(".post-read-more").forEach(function(btn) {
+                btn.addEventListener("click", function() {
+                    const body = btn.previousElementSibling;
+                    body.classList.toggle("truncated");
+                    btn.textContent = body.classList.contains("truncated") ? "Read more" : "Show less";
+                });
+            });
+
+            // Pagination
+            if (totalPages > 1) {
+                pagEl.style.display = "flex";
+                document.getElementById("page-info").textContent = "Page " + currentPage + " of " + totalPages;
+                document.getElementById("prev-page").disabled = currentPage <= 1;
+                document.getElementById("next-page").disabled = currentPage >= totalPages;
+            } else {
+                pagEl.style.display = "none";
+            }
+        } catch (err) {
+            listEl.innerHTML = '<div class="post-empty">Failed to load posts.</div>';
+        }
+    }
+
+    document.getElementById("prev-page").addEventListener("click", function() {
+        if (currentPage > 1) { currentPage--; loadPosts(); }
+    });
+    document.getElementById("next-page").addEventListener("click", function() {
+        currentPage++; loadPosts();
+    });
+
+    // Search with debounce
+    document.getElementById("post-search").addEventListener("input", function() {
+        clearTimeout(searchTimer);
+        const q = this.value;
+        searchTimer = setTimeout(function() {
+            searchQuery = q;
+            currentPage = 1;
+            loadPosts();
+        }, 250);
+    });
+
+    // Join
+    var joinBtn = document.getElementById("join-btn");
+    if (joinBtn) {
+        joinBtn.addEventListener("click", async function() {
+            try {
+                await api(API + "/members/", {method:"POST", body:{}});
+                location.reload();
+            } catch(e) { alert(e.message); }
+        });
+    }
+
+    // Post composer
+    var composerForm = document.getElementById("composer-form");
+    if (composerForm) {
+        var openBtn = document.getElementById("composer-open");
+        var cancelBtn = document.getElementById("composer-cancel");
+        var submitBtn = document.getElementById("composer-submit");
+        var titleInput = document.getElementById("composer-title");
+        var bodyInput = document.getElementById("composer-body");
+        var msgEl = document.getElementById("composer-msg");
+
+        function showMsg(text, isError) {
+            msgEl.textContent = text;
+            msgEl.className = "composer-msg " + (isError ? "error" : "success");
+            msgEl.style.display = "block";
+        }
+        function clearMsg() { msgEl.style.display = "none"; msgEl.textContent = ""; }
+
+        function openComposer() {
+            openBtn.style.display = "none";
+            composerForm.style.display = "block";
+            titleInput.focus();
+        }
+        function closeComposer() {
+            composerForm.style.display = "none";
+            openBtn.style.display = "inline-flex";
+            titleInput.value = "";
+            bodyInput.value = "";
+            clearMsg();
+        }
+
+        openBtn.addEventListener("click", openComposer);
+        cancelBtn.addEventListener("click", closeComposer);
+
+        composerForm.addEventListener("submit", async function(e) {
+            e.preventDefault();
+            clearMsg();
+            var title = titleInput.value.trim();
+            var body = bodyInput.value.trim();
+            if (!title) { showMsg("Title is required.", true); return; }
+            if (!body) { showMsg("Body is required.", true); return; }
+            submitBtn.disabled = true;
+            try {
+                await api(API + "/posts/", {method:"POST", body:{title:title, body:body}});
+                closeComposer();
+                currentPage = 1;
+                loadPosts();
+            } catch (err) {
+                showMsg(err.message || "Failed to create post.", true);
+            } finally {
+                submitBtn.disabled = false;
+            }
+        });
+    }
+
+    // Leave
+    var leaveBtn = document.getElementById("leave-btn");
+    if (leaveBtn) {
+        leaveBtn.addEventListener("click", async function() {
+            if (!confirm("Leave this group?")) return;
+            try {
+                const me = await api("/api/users/me/");
+                await api(API + "/members/", {method:"DELETE", body:{user_id: me.id}});
+                location.reload();
+            } catch(e) { alert(e.message); }
+        });
+    }
+
+    loadPosts();
+})();
+</script>
+{% endblock %}
